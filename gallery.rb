@@ -57,4 +57,4 @@ File.open("index.html", "w") do |f|
   f.write("</html>\n")
 end
 
-puts "index.html wurde erfolgreich erstellt."
+puts "index.html was created successfully."
