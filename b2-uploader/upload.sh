@@ -1,5 +1,28 @@
 #!/bin/bash
 set -e
+MAX_PARALLEL_UPLOADS=3
+current_uploads=0
+
+check_file_exists() {
+    local PREFIX="$1"
+    local FILE_SHA1="$2"
+
+    FILES_INFO=$(curl -s -H "Authorization: $AUTHORIZATION_TOKEN" "$API_URL/b2api/v2/b2_list_file_names?bucketId=$B2_BUCKET_ID&prefix=$PREFIX")
+
+    if [ -z "$FILES_INFO" ]; then
+        echo "Failed to fetch file information."
+        return 1
+    fi
+
+    EXISTING_SHA1=$(echo "$FILES_INFO" | jq -r --arg PREFIX "$PREFIX" '.files[]? | select(.fileName == $PREFIX) | .contentSha1 // empty')
+
+    if [ -z "$EXISTING_SHA1" ]; then
+        return 1
+    fi
+
+    [[ "$EXISTING_SHA1" == "$FILE_SHA1" ]]
+}
+
 
 upload_file() {
     local FILE_PATH="$1"
@@ -14,6 +37,11 @@ upload_file() {
     UPLOAD_AUTHORIZATION_TOKEN=$(echo "$UPLOAD_DATA" | jq -r '.authorizationToken')
 
     CONTENT_SHA1=$(sha1sum "$FILE_PATH" | awk '{ print $1 }')
+
+    if check_file_exists "$FILE_NAME" "$CONTENT_SHA1"; then
+        echo "File already exists with the same SHA1. Skipping upload."
+        return
+    fi
 
     curl -s -H "Authorization: $UPLOAD_AUTHORIZATION_TOKEN" -H "X-Bz-File-Name: $FILE_NAME" -H "Content-Type: b2/x-auto" -H "X-Bz-Content-Sha1: $CONTENT_SHA1" --data-binary "@$FILE_PATH" "$UPLOAD_URL"
 
@@ -30,7 +58,15 @@ recursive_upload() {
             recursive_upload "$item" "$new_prefix"
         done
     else
-        upload_file "$TARGET" "$PREFIX"
+        ((current_uploads++))
+
+        upload_file "$TARGET" "$PREFIX" &  # Starte den Upload im Hintergrund
+
+        # Warte, wenn die maximale Anzahl paralleler Uploads erreicht ist
+        if [[ $current_uploads -ge $MAX_PARALLEL_UPLOADS ]]; then
+            wait  # Warte auf alle Hintergrundjobs
+            current_uploads=0
+        fi
     fi
 }
 
