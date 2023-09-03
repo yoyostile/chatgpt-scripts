@@ -5,7 +5,7 @@ require 'cgi'
 
 folder_path = "."
 thumbs_folder = "thumbs"
-photo_types = ["jpg", "jpeg", "png", "gif"]
+photo_types = ["jpg", "jpeg", "png", "gif", "heic"]
 folder_name = File.basename(Dir.getwd)
 
 Dir.mkdir(thumbs_folder) unless Dir.exist?(thumbs_folder)
@@ -37,13 +37,14 @@ File.open("index.html", "w") do |f|
   f.write("<div class='row mb-4'>\n")
 
   sorted_photos.each do |photo|
-    thumb_path = File.join(thumbs_folder, photo)
+    thumb_path = File.join(thumbs_folder, "#{File.basename(photo, File.extname(photo))}.jpeg")
     escaped_photo = Shellwords.escape(photo)
     escaped_thumb_path = Shellwords.escape(thumb_path)
 
     unless File.exist?(thumb_path)
       puts "Creating thumbnail for #{photo}..."
-      system("convert #{escaped_photo} -resize 1200x1200 #{escaped_thumb_path}")
+      escaped_jpeg_thumb_path = Shellwords.escape("#{thumbs_folder}/#{File.basename(photo, File.extname(photo))}.jpeg")
+      system("convert #{escaped_photo} -resize 1200x1200 #{escaped_jpeg_thumb_path}")
     end
 
     f.write("<div class='col-lg-3 col-md-6 col-sm-12 d-flex align-items-center justify-content-center mb-4'>\n")
