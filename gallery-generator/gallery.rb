@@ -46,7 +46,7 @@ File.open("index.html", "w") do |f|
       system("convert #{escaped_photo} -resize 1200x1200 #{escaped_thumb_path}")
     end
 
-    f.write("<div class='col-lg-3 col-md-6 col-sm-6 d-flex align-items-center justify-content-center mb-4'>\n")
+    f.write("<div class='col-lg-3 col-md-6 col-sm-12 d-flex align-items-center justify-content-center mb-4'>\n")
     f.write("<a href=\"#{photo}\"><img src=\"#{thumb_path}\" class='rounded img-fluid' alt=\"#{photo}\"></a>\n")
     f.write("</div>\n")
   end
